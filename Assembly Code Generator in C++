@@ -1,0 +1,114 @@
+#include <iostream>
+#include <map>
+#include <vector>
+using namespace std;
+
+// Node types (from AST)
+enum NodeType { PROGRAM, VAR_DECL, ASSIGNMENT, IF_STATEMENT, PRINT_STATEMENT, EXPRESSION };
+
+// AST Base Class
+struct ASTNode {
+    NodeType type;
+};
+
+// Expression Node (for arithmetic)
+struct ExpressionNode : ASTNode {
+    string value;
+    ExpressionNode *left = nullptr, *right = nullptr;
+};
+
+// Variable Declaration Node
+struct VarDeclNode : ASTNode {
+    string varName;
+    ExpressionNode* value;
+};
+
+// Assignment Node
+struct AssignmentNode : ASTNode {
+    string varName;
+    ExpressionNode* value;
+};
+
+// Print Node
+struct PrintNode : ASTNode {
+    ExpressionNode* value;
+};
+
+// If Statement Node
+struct IfNode : ASTNode {
+    ExpressionNode* condition;
+    ASTNode* ifBody;
+    ASTNode* elseBody;
+};
+
+// Memory allocation for variables
+map<string, int> memoryLocation;
+int memIndex = 0;
+int labelCounter = 0;
+
+// Helper to generate new labels
+string generateLabel(string prefix) {
+    return prefix + to_string(labelCounter++);
+}
+
+// Function to generate assembly for expressions
+void generateExpression(ExpressionNode* expr, vector<string>& code) {
+    if (!expr) return;
+    
+    if (expr->left && expr->right) { // Binary operation
+        generateExpression(expr->left, code);
+        code.push_back("STORE TMP1");  // Store left operand in TMP1
+        generateExpression(expr->right, code);
+        code.push_back("LOAD A, TMP1");
+
+        if (expr->value == "+") {
+            code.push_back("ADD A, B");
+        } else if (expr->value == "-") {
+            code.push_back("SUB A, B");
+        }
+
+    } else { // Single value (number or variable)
+        if (isdigit(expr->value[0])) {
+            code.push_back("LOAD A, " + expr->value);
+        } else {
+            code.push_back("LOAD A, " + expr->value);
+        }
+    }
+}
+
+// Function to generate assembly for statements
+void generateCode(ASTNode* node, vector<string>& code) {
+    if (!node) return;
+
+    if (node->type == VAR_DECL) {
+        VarDeclNode* varDecl = (VarDeclNode*)node;
+        generateExpression(varDecl->value, code);
+        memoryLocation[varDecl->varName] = memIndex++;
+        code.push_back("STORE " + varDecl->varName);
+    
+    } else if (node->type == ASSIGNMENT) {
+        AssignmentNode* assign = (AssignmentNode*)node;
+        generateExpression(assign->value, code);
+        code.push_back("STORE " + assign->varName);
+    
+    } else if (node->type == PRINT_STATEMENT) {
+        PrintNode* printNode = (PrintNode*)node;
+        generateExpression(printNode->value, code);
+        code.push_back("OUT A");
+    
+    } else if (node->type == IF_STATEMENT) {
+        IfNode* ifNode = (IfNode*)node;
+        string elseLabel = generateLabel("ELSE");
+        string endLabel = generateLabel("ENDIF");
+
+        generateExpression(ifNode->condition, code);
+        code.push_back("JZ " + elseLabel);
+
+        generateCode(ifNode->ifBody, code);
+        code.push_back("JMP " + endLabel);
+
+        code.push_back(elseLabel + ":");
+        generateCode(ifNode->elseBody, code);
+        code.push_back(endLabel + ":");
+    }
+}
