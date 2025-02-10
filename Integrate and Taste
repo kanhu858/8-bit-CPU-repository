@@ -1,0 +1,146 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <map>
+#include <sstream>
+#include <cctype>
+
+using namespace std;
+
+// Token types
+enum TokenType { VAR, IDENTIFIER, NUMBER, ASSIGN, OPERATOR, IF, PRINT, LBRACE, RBRACE, END };
+
+// Token structure
+struct Token {
+    TokenType type;
+    string value;
+};
+
+// Lexer: Converts input into tokens
+vector<Token> lexer(const string &code) {
+    vector<Token> tokens;
+    stringstream ss(code);
+    string word;
+
+    while (ss >> word) {
+        if (word == "var") tokens.push_back({VAR, word});
+        else if (word == "if") tokens.push_back({IF, word});
+        else if (word == "print") tokens.push_back({PRINT, word});
+        else if (word == "=") tokens.push_back({ASSIGN, word});
+        else if (word == "+") tokens.push_back({OPERATOR, word});
+        else if (isdigit(word[0])) tokens.push_back({NUMBER, word});
+        else if (word == "{") tokens.push_back({LBRACE, word});
+        else if (word == "}") tokens.push_back({RBRACE, word});
+        else tokens.push_back({IDENTIFIER, word});
+    }
+    tokens.push_back({END, ""});
+    return tokens;
+}
+
+// Node types
+enum NodeType { ASSIGNMENT, EXPRESSION, PRINT_STMT, IF_STMT };
+
+// AST Base Class
+struct ASTNode {
+    NodeType type;
+};
+
+// Expression Node (arithmetic)
+struct ExpressionNode : ASTNode {
+    string value;
+    ExpressionNode *left = nullptr, *right = nullptr;
+};
+
+// Assignment Node
+struct AssignmentNode : ASTNode {
+    string varName;
+    ExpressionNode *value;
+};
+
+// Print Node
+struct PrintNode : ASTNode {
+    ExpressionNode* value;
+};
+
+// If Statement Node
+struct IfNode : ASTNode {
+    ExpressionNode* condition;
+    ASTNode* ifBody;
+};
+
+// Parser: Converts tokens into AST
+class Parser {
+    vector<Token> tokens;
+    int index = 0;
+
+    Token peek() { return tokens[index]; }
+    Token consume() { return tokens[index++]; }
+
+public:
+    Parser(vector<Token> tokens) : tokens(tokens) {}
+
+    ExpressionNode* parseExpression() {
+        Token t = consume();
+        ExpressionNode* node = new ExpressionNode();
+        node->value = t.value;
+        return node;
+    }
+
+    ASTNode* parseStatement() {
+        Token t = peek();
+        if (t.type == VAR) {
+            consume();
+            string varName = consume().value;
+            consume(); // consume '='
+            ExpressionNode* expr = parseExpression();
+            return new AssignmentNode{varName, expr};
+        }
+        if (t.type == PRINT) {
+            consume();
+            ExpressionNode* expr = parseExpression();
+            return new PrintNode{expr};
+        }
+        return nullptr;
+    }
+
+    ASTNode* parse() {
+        return parseStatement();
+    }
+};
+
+// Code Generator
+void generateCode(ASTNode* node, vector<string>& code) {
+    if (node->type == ASSIGNMENT) {
+        AssignmentNode* assign = (AssignmentNode*)node;
+        code.push_back("LOAD A, " + assign->value->value);
+        code.push_back("STORE " + assign->varName);
+    }
+    else if (node->type == PRINT_STMT) {
+        PrintNode* printNode = (PrintNode*)node;
+        code.push_back("LOAD A, " + printNode->value->value);
+        code.push_back("OUT A");
+    }
+}
+
+// Compiler Pipeline
+void compile(const string &source) {
+    vector<Token> tokens = lexer(source);
+    Parser parser(tokens);
+    ASTNode* ast = parser.parse();
+    
+    vector<string> assemblyCode;
+    generateCode(ast, assemblyCode);
+
+    ofstream outFile("output.asm");
+    for (const string& line : assemblyCode) {
+        cout << line << endl;
+        outFile << line << endl;
+    }
+    outFile.close();
+}
+
+int main() {
+    string simpleLangCode = "var x = 5; print x;";
+    compile(simpleLangCode);
+    return 0;
+}
