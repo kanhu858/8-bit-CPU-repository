@@ -1,0 +1,163 @@
+#include <iostream>
+#include <vector>
+#include <stdexcept>
+
+using namespace std;
+
+// Token types
+enum TokenType { KEYWORD, IDENTIFIER, NUMBER, OPERATOR, SYMBOL, END_OF_FILE };
+
+// Token structure
+struct Token {
+    TokenType type;
+    string value;
+};
+
+// AST Node Types
+enum NodeType { PROGRAM, VAR_DECL, ASSIGNMENT, IF_STATEMENT, WHILE_STATEMENT, PRINT_STATEMENT, EXPRESSION };
+
+// Base AST Node
+struct ASTNode {
+    NodeType type;
+};
+
+// Expression Node
+struct ExpressionNode : ASTNode {
+    string value;
+    ExpressionNode *left = nullptr, *right = nullptr;
+};
+
+// Variable Declaration Node
+struct VarDeclNode : ASTNode {
+    string varName;
+    ExpressionNode* value;
+};
+
+// Assignment Node
+struct AssignmentNode : ASTNode {
+    string varName;
+    ExpressionNode* value;
+};
+
+// Print Statement Node
+struct PrintNode : ASTNode {
+    ExpressionNode* value;
+};
+
+// Parser Class
+class Parser {
+private:
+    vector<Token> tokens;
+    int currentIndex = 0;
+
+    Token peek() { return tokens[currentIndex]; }
+    Token advance() { return tokens[currentIndex++]; }
+    bool match(TokenType type) { return peek().type == type; }
+
+    void expect(string expected) {
+        if (peek().value != expected) {
+            throw runtime_error("Syntax Error: Expected '" + expected + "' but found '" + peek().value + "'");
+        }
+        advance();
+    }
+
+public:
+    Parser(vector<Token> tokenList) : tokens(tokenList) {}
+
+    ASTNode* parse() {
+        vector<ASTNode*> statements;
+        while (currentIndex < tokens.size()) {
+            statements.push_back(parseStatement());
+        }
+        return new ASTNode{PROGRAM};
+    }
+
+    ASTNode* parseStatement() {
+        if (match(KEYWORD) && peek().value == "var") return parseVarDecl();
+        if (match(IDENTIFIER)) return parseAssignment();
+        if (match(KEYWORD) && peek().value == "if") return parseIfStatement();
+        if (match(KEYWORD) && peek().value == "while") return parseWhileStatement();
+        if (match(KEYWORD) && peek().value == "print") return parsePrintStatement();
+        throw runtime_error("Syntax Error: Unexpected token '" + peek().value + "'");
+    }
+
+    ASTNode* parseVarDecl() {
+        expect("var");
+        string varName = advance().value;
+        expect("=");
+        ExpressionNode* value = parseExpression();
+        expect(";");
+        return new VarDeclNode{VAR_DECL, varName, value};
+    }
+
+    ASTNode* parseAssignment() {
+        string varName = advance().value;
+        expect("=");
+        ExpressionNode* value = parseExpression();
+        expect(";");
+        return new AssignmentNode{ASSIGNMENT, varName, value};
+    }
+
+    ASTNode* parseIfStatement() {
+        expect("if");
+        expect("(");
+        ExpressionNode* condition = parseExpression();
+        expect(")");
+        expect("{");
+        ASTNode* ifBody = parseStatement();
+        expect("}");
+        return new ASTNode{IF_STATEMENT};
+    }
+
+    ASTNode* parseWhileStatement() {
+        expect("while");
+        expect("(");
+        ExpressionNode* condition = parseExpression();
+        expect(")");
+        expect("{");
+        ASTNode* whileBody = parseStatement();
+        expect("}");
+        return new ASTNode{WHILE_STATEMENT};
+    }
+
+    ASTNode* parsePrintStatement() {
+        expect("print");
+        expect("(");
+        ExpressionNode* value = parseExpression();
+        expect(")");
+        expect(";");
+        return new PrintNode{PRINT_STATEMENT, value};
+    }
+
+    ExpressionNode* parseExpression() {
+        ExpressionNode* left = parseTerm();
+        while (match(OPERATOR) && (peek().value == "+" || peek().value == "-")) {
+            string op = advance().value;
+            ExpressionNode* right = parseTerm();
+            left = new ExpressionNode{EXPRESSION, op, left, right};
+        }
+        return left;
+    }
+
+    ExpressionNode* parseTerm() {
+        ExpressionNode* left = parseFactor();
+        while (match(OPERATOR) && (peek().value == "*" || peek().value == "/")) {
+            string op = advance().value;
+            ExpressionNode* right = parseFactor();
+            left = new ExpressionNode{EXPRESSION, op, left, right};
+        }
+        return left;
+    }
+
+    ExpressionNode* parseFactor() {
+        if (match(NUMBER)) return new ExpressionNode{EXPRESSION, advance().value};
+        if (match(IDENTIFIER)) return new ExpressionNode{EXPRESSION, advance().value};
+        if (peek().value == "(") {
+            advance();
+            ExpressionNode* expr = parseExpression();
+            expect(")");
+            return expr;
+        }
+        throw runtime_error("Syntax Error: Unexpected token '" + peek().value + "'");
+    }
+};
