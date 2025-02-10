@@ -1,0 +1,128 @@
+var <variable_name> = <value>;
+Variables must be declared before use.
+Variables store integer values (0-255).
+Only var keyword is used for declaration.
+Example:
+
+simplelang
+Copy
+Edit
+var x = 10;
+var y = 20;
+2. Assignments
+Syntax:
+
+simplelang
+Copy
+Edit
+<variable_name> = <expression>;
+Variables can be assigned new values.
+Expressions may involve arithmetic operations.
+Example:
+
+simplelang
+Copy
+Edit
+x = y + 5;
+3. Arithmetic Operations
+Supported Operators:
+
++ (Addition)
+- (Subtraction)
+* (Multiplication)
+/ (Integer Division)
+Syntax:
+
+simplelang
+Copy
+Edit
+<variable_name> = <expression>;
+Example:
+
+simplelang
+Copy
+Edit
+var a = 10;
+var b = 5;
+var c = a + b;  // c = 15
+var d = c - 2;  // d = 13
+4. Conditional Statements
+Syntax:
+
+simplelang
+Copy
+Edit
+if (<condition>) {
+    <statements>;
+} else {
+    <statements>;
+}
+Supports if-else statements.
+Conditions can use ==, !=, >, <, >=, <=.
+Example:
+
+simplelang
+Copy
+Edit
+var x = 10;
+if (x > 5) {
+    x = x - 2;
+} else {
+    x = x + 2;
+}
+5. Loops (While)
+Syntax:
+
+simplelang
+Copy
+Edit
+while (<condition>) {
+    <statements>;
+}
+Loops execute while the condition is true.
+Example:
+
+simplelang
+Copy
+Edit
+var count = 0;
+while (count < 5) {
+    count = count + 1;
+}
+6. Input and Output
+Syntax:
+
+simplelang
+Copy
+Edit
+print(<expression>);
+read(<variable_name>);
+print displays a value.
+read takes user input.
+Example:
+
+simplelang
+Copy
+Edit
+var age;
+read(age);
+print(age);
+7. Full Example Program
+simplelang
+Copy
+Edit
+var a = 10;
+var b = 20;
+var c = a + b;
+
+if (c > 25) {
+    print(c);
+} else {
+    print(0);
+}
+
+var count = 0;
+while (count < 3) {
+    print(count);
+    count = count + 1;
+}
