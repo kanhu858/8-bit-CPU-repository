@@ -1,0 +1,117 @@
+#include <iostream>
+#include <fstream>
+#include <cctype>
+#include <vector>
+#include <unordered_map>
+
+using namespace std;
+
+// Token structure
+enum TokenType {
+    KEYWORD, IDENTIFIER, NUMBER, OPERATOR, SYMBOL, UNKNOWN
+};
+
+struct Token {
+    TokenType type;
+    string value;
+};
+
+// List of keywords in SimpleLang
+unordered_map<string, TokenType> keywords = {
+    {"var", KEYWORD}, {"if", KEYWORD}, {"else", KEYWORD}, {"while", KEYWORD},
+    {"print", KEYWORD}, {"read", KEYWORD}
+};
+
+// List of operators
+unordered_map<string, TokenType> operators = {
+    {"+", OPERATOR}, {"-", OPERATOR}, {"*", OPERATOR}, {"/", OPERATOR},
+    {"=", OPERATOR}, {"==", OPERATOR}, {"!=", OPERATOR}, {"<", OPERATOR},
+    {">", OPERATOR}, {"<=", OPERATOR}, {">=", OPERATOR}
+};
+
+// List of symbols
+unordered_map<char, TokenType> symbols = {
+    {';', SYMBOL}, {'{', SYMBOL}, {'}', SYMBOL}, {'(', SYMBOL}, {')', SYMBOL}
+};
+
+// Lexer function
+vector<Token> tokenize(string code) {
+    vector<Token> tokens;
+    int i = 0;
+    int n = code.length();
+
+    while (i < n) {
+        // Skip whitespace
+        if (isspace(code[i])) {
+            i++;
+            continue;
+        }
+
+        // Identifiers and Keywords
+        if (isalpha(code[i])) {
+            string word;
+            while (isalnum(code[i])) {
+                word += code[i];
+                i++;
+            }
+            if (keywords.find(word) != keywords.end()) {
+                tokens.push_back({KEYWORD, word});
+            } else {
+                tokens.push_back({IDENTIFIER, word});
+            }
+            continue;
+        }
+
+        // Numbers
+        if (isdigit(code[i])) {
+            string num;
+            while (isdigit(code[i])) {
+                num += code[i];
+                i++;
+            }
+            tokens.push_back({NUMBER, num});
+            continue;
+        }
+
+        // Operators (multi-character)
+        string op;
+        while (i < n && (operators.find(op + code[i]) != operators.end())) {
+            op += code[i];
+            i++;
+        }
+        if (!op.empty()) {
+            tokens.push_back({OPERATOR, op});
+            continue;
+        }
+
+        // Symbols
+        if (symbols.find(code[i]) != symbols.end()) {
+            tokens.push_back({SYMBOL, string(1, code[i])});
+            i++;
+            continue;
+        }
+
+        // Unknown Token
+        tokens.push_back({UNKNOWN, string(1, code[i])});
+        i++;
+    }
+
+    return tokens;
+}
+
+// Main function
+int main() {
+    string code;
+    cout << "Enter SimpleLang Code (End with #):\n";
+    getline(cin, code, '#'); // Read code until #
+
+    vector<Token> tokens = tokenize(code);
+
+    // Print Tokens
+    cout << "\nTokens:\n";
+    for (auto &token : tokens) {
+        cout << "Type: " << token.type << ", Value: " << token.value << endl;
+    }
+
+    return 0;
+}
